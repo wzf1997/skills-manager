@@ -12,14 +12,35 @@ jobs:
       fail-fast: false
       matrix:
         include:
+          # macOS ARM64
           - os: macos-latest
+            target: aarch64-apple-darwin
             args: '--target aarch64-apple-darwin'
+
+          # macOS x86_64
           - os: macos-latest
+            target: x86_64-apple-darwin
             args: '--target x86_64-apple-darwin'
+
+          # Windows x64
           - os: windows-latest
-            args: ''
+            target: x86_64-pc-windows-msvc
+            args: '--target x86_64-pc-windows-msvc'
+
+          # Windows ARM64
+          - os: windows-latest
+            target: aarch64-pc-windows-msvc
+            args: '--target aarch64-pc-windows-msvc'
+
+          # Linux x86_64
           - os: ubuntu-22.04
-            args: ''
+            target: x86_64-unknown-linux-gnu
+            args: '--target x86_64-unknown-linux-gnu'
+
+          # Linux ARM64 (native runner)
+          - os: ubuntu-22.04-arm
+            target: aarch64-unknown-linux-gnu
+            args: '--target aarch64-unknown-linux-gnu'
 
     runs-on: ${{ matrix.os }}
 
@@ -35,13 +56,37 @@ jobs:
       - name: Install Rust
         uses: dtolnay/rust-toolchain@stable
         with:
-          targets: ${{ matrix.os == 'macos-latest' && 'aarch64-apple-darwin,x86_64-apple-darwin' || '' }}
+          targets: ${{ matrix.target }}
 
-      - name: Install Linux deps
+      - name: Install Linux deps (x86_64)
         if: matrix.os == 'ubuntu-22.04'
         run: |
           sudo apt-get update
-          sudo apt-get install -y libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev patchelf
+          sudo apt-get install -y \
+            libwebkit2gtk-4.1-dev \
+            libappindicator3-dev \
+            librsvg2-dev \
+            patchelf
+
+      - name: Install Linux deps (ARM64)
+        if: matrix.os == 'ubuntu-22.04-arm'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            libwebkit2gtk-4.1-dev \
+            libappindicator3-dev \
+            librsvg2-dev \
+            patchelf
+
+      - name: Add MSVC ARM64 target (Windows ARM64 only)
+        if: matrix.target == 'aarch64-pc-windows-msvc'
+        shell: pwsh
+        run: |
+          # Install ARM64 MSVC build tools via VS installer
+          $vsInstaller = "${env:ProgramFiles(x86)}\Microsoft Visual Studio\Installer\vs_installer.exe"
+          & $vsInstaller modify --installPath "C:\Program Files\Microsoft Visual Studio\2022\Enterprise" `
+            --add Microsoft.VisualStudio.Component.VC.Tools.ARM64 --quiet --norestart | Out-Null
+          Write-Host "ARM64 MSVC tools installed"
 
       - name: Install frontend deps
         run: npm ci
