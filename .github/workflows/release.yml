@@ -4,109 +4,56 @@ on:
   push:
     tags:
       - 'v*'
-
-permissions:
-  contents: write   # 允许创建 Release 和上传产物
+  workflow_dispatch:
 
 jobs:
-  release:
-    name: Build & Release macOS DMG
-    runs-on: macos-latest
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: macos-latest
+            args: '--target aarch64-apple-darwin'
+          - os: macos-latest
+            args: '--target x86_64-apple-darwin'
+          - os: windows-latest
+            args: ''
+          - os: ubuntu-22.04
+            args: ''
+
+    runs-on: ${{ matrix.os }}
 
     steps:
-      # ── 1. 检出代码 ──────────────────────────────────────────
-      - name: Checkout
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: 0   # 获取完整历史，供 changelog 使用
+      - uses: actions/checkout@v4
 
-      # ── 2. 从 tag 提取版本号（去掉前缀 v） ───────────────────
-      - name: Extract version from tag
-        id: version
-        run: |
-          TAG="${GITHUB_REF_NAME}"
-          VERSION="${TAG#v}"
-          echo "tag=$TAG"         >> $GITHUB_OUTPUT
-          echo "version=$VERSION" >> $GITHUB_OUTPUT
-          echo "📌 Tag: $TAG  →  Version: $VERSION"
-
-      # ── 3. 同步 package.json 版本号 ──────────────────────────
-      - name: Sync package.json version
-        run: |
-          VERSION="${{ steps.version.outputs.version }}"
-          node -e "
-            const fs = require('fs');
-            const pkg = JSON.parse(fs.readFileSync('package.json','utf8'));
-            pkg.version = '$VERSION';
-            fs.writeFileSync('package.json', JSON.stringify(pkg, null, 2) + '\n');
-            console.log('✅ package.json version ->', '$VERSION');
-          "
-
-      # ── 4. 设置 Node.js ───────────────────────────────────────
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          node-version: 20
           cache: 'npm'
 
-      # ── 5. 安装依赖 ───────────────────────────────────────────
-      - name: Install dependencies
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.os == 'macos-latest' && 'aarch64-apple-darwin,x86_64-apple-darwin' || '' }}
+
+      - name: Install Linux deps
+        if: matrix.os == 'ubuntu-22.04'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev patchelf
+
+      - name: Install frontend deps
         run: npm ci
 
-      # ── 6. 构建 + 打包 DMG ────────────────────────────────────
-      - name: Build & package DMG
-        run: npm run dist
-        env:
-          CI: 'true'
-
-      # ── 7. 列出产物（方便调试）────────────────────────────────
-      - name: List release artifacts
-        run: ls -lh release/*.dmg
-
-      # ── 8. 生成 AI 智能 Changelog ─────────────────────────────
-      - name: Generate changelog
-        id: changelog
-        env:
-          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
-        run: |
-          PREV_TAG=$(git describe --tags --abbrev=0 HEAD^ 2>/dev/null || echo "")
-          if [ -z "$PREV_TAG" ]; then
-            COMMITS=$(git log --pretty=format:"- %s (%h)" | head -30)
-          else
-            COMMITS=$(git log "${PREV_TAG}..HEAD" --pretty=format:"- %s (%h)")
-          fi
-
-          BODY=""
-          if [ -n "$OPENAI_API_KEY" ]; then
-            PROMPT="你是一个专业的技术写手。请根据以下 Git commit 列表，生成一份简洁、用户友好的中文 Changelog。按「新功能 🚀」「Bug 修复 🐛」「优化改进 ✨」「其他」四个分类整理，没有的分类可省略。格式使用 Markdown。\n\nCommits:\n${COMMITS}"
-            BODY=$(curl -s https://api.openai.com/v1/chat/completions \
-              -H "Authorization: Bearer $OPENAI_API_KEY" \
-              -H "Content-Type: application/json" \
-              -d "$(jq -n --arg p "$PROMPT" '{model:"gpt-4o-mini",messages:[{role:"user",content:$p}],max_tokens:600}')" \
-              | jq -r '.choices[0].message.content // empty' 2>/dev/null || echo "")
-          fi
-
-          if [ -z "$BODY" ]; then
-            BODY="## 更新内容
-
-          ${COMMITS}"
-          fi
-
-          {
-            echo "body<<EOF"
-            printf '%s\n' "$BODY"
-            echo "EOF"
-          } >> $GITHUB_OUTPUT
-
-      # ── 9. 创建 GitHub Release 并上传 DMG ────────────────────
-      - name: Create GitHub Release
-        uses: softprops/action-gh-release@v2
-        with:
-          tag_name: ${{ steps.version.outputs.tag }}
-          name: "Skills Manager ${{ steps.version.outputs.tag }}"
-          body: ${{ steps.changelog.outputs.body }}
-          files: release/*.dmg
-          draft: false
-          prerelease: ${{ contains(steps.version.outputs.tag, '-') }}
+      - name: Build Tauri app
+        uses: tauri-apps/tauri-action@v0
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          args: ${{ matrix.args }}
+          tagName: ${{ github.ref_name }}
+          releaseName: 'Skills Manager ${{ github.ref_name }}'
+          releaseBody: 'See changelog for details.'
+          releaseDraft: true
+          prerelease: false
