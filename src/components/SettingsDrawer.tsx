@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useApp } from '../context/AppContext'
+import { api } from '../api'
 import type { AppConfig } from '../types'
 
 export function SettingsDrawer() {
@@ -12,7 +13,7 @@ export function SettingsDrawer() {
     if (!customPath.trim()) return
     const existing = config?.customSources || []
     const next = [...existing, { path: customPath.trim() }]
-    await window.electronAPI.setConfig({ customSources: next })
+    await api.setConfig({ customSources: next })
     setCustomPath('')
     await refresh()
   }
@@ -20,7 +21,7 @@ export function SettingsDrawer() {
   const removeCustomSource = async (idx: number) => {
     const existing = config?.customSources || []
     const next = existing.filter((_, i) => i !== idx)
-    await window.electronAPI.setConfig({ customSources: next })
+    await api.setConfig({ customSources: next })
     await refresh()
   }
 

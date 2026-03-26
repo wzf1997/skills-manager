@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect } from 'react'
 import { useApp } from '../context/AppContext'
+import { api } from '../api'
 import type { SkillSource } from '../types'
 
 function SourceItem({
@@ -82,7 +83,7 @@ export function Sidebar() {
   const recentCount = skills.filter(s => recentDirPaths.includes(s.dirPath)).length
 
   const handleRename = async (sourceId: string, newLabel: string) => {
-    await window.electronAPI.renameSource(sourceId, newLabel)
+    await api.renameSource(sourceId, newLabel)
     // sources:updated 事件会自动刷新
   }
 

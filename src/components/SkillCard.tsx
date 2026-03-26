@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect, useCallback } from 'react'
 import { useApp } from '../context/AppContext'
+import { api } from '../api'
 import type { SkillMeta } from '../types'
 
 interface ContextMenuState {
@@ -50,7 +51,7 @@ export function SkillCard({ skill, isSelected, onToggleSelect }: Props) {
     setMenu(null)
     setCopying(true)
     try {
-      const result = await window.electronAPI.copySkill(skill.slug, skill.dirPath, targetSourceId)
+      const result = await api.copySkill(skill.slug, skill.dirPath, targetSourceId)
       if (result.success) {
         const label = result.mode === 'symlink' ? '🔗 软链接成功' : '📋 复制成功'
         setCopyToast(label)
@@ -69,7 +70,7 @@ export function SkillCard({ skill, isSelected, onToggleSelect }: Props) {
     if (!window.confirm(`确认删除 Skill「${skill.slug}」？此操作不可撤销。`)) return
     setDeleting(true)
     try {
-      const result = await window.electronAPI.deleteSkill(skill.dirPath, skill.source.id)
+      const result = await api.deleteSkill(skill.dirPath, skill.source.id)
       if (result.success) {
         await refresh()
       } else {
@@ -201,7 +202,7 @@ export function SkillCard({ skill, isSelected, onToggleSelect }: Props) {
           )}
 
           <button
-            onClick={() => { window.electronAPI.openInFinder(skill.dirPath); setMenu(null) }}
+            onClick={() => { api.openInFinder(skill.dirPath); setMenu(null) }}
             className="w-full flex items-center gap-2.5 px-3 py-2 text-sm text-gray-300 hover:bg-white/5 transition-colors"
           >
             <svg className="w-4 h-4 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">

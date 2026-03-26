@@ -1,6 +1,7 @@
 import { useEffect, useState, useRef } from 'react'
 import { marked } from 'marked'
 import { useApp } from '../context/AppContext'
+import { api } from '../api'
 import type { SkillMeta } from '../types'
 
 // 配置 marked 安全选项
@@ -26,7 +27,7 @@ export function SkillDetailPanel({ skill }: Props) {
   useEffect(() => {
     setMdLoading(true)
     setMdContent(null)
-    window.electronAPI.readSkillMd(skill.dirPath).then(content => {
+    api.readSkillMd(skill.dirPath).then(content => {
       setMdContent(content)
       setMdLoading(false)
     })
@@ -45,7 +46,7 @@ export function SkillDetailPanel({ skill }: Props) {
 
   const handleCopy = async (targetSourceId: string) => {
     setCopyState(prev => ({ ...prev, [targetSourceId]: 'loading' }))
-    const result = await window.electronAPI.copySkill(skill.slug, skill.dirPath, targetSourceId)
+    const result = await api.copySkill(skill.slug, skill.dirPath, targetSourceId)
     setCopyState(prev => ({ ...prev, [targetSourceId]: result.success ? 'done' : 'idle' }))
     if (result.success) {
       setTimeout(() => setCopyState(prev => ({ ...prev, [targetSourceId]: 'idle' })), 2000)
@@ -122,7 +123,7 @@ export function SkillDetailPanel({ skill }: Props) {
         <div className="border-t border-border flex-shrink-0 px-5 py-3 space-y-2">
           <div className="flex items-center gap-2">
             <button
-              onClick={() => window.electronAPI.openInFinder(skill.dirPath)}
+              onClick={() => api.openInFinder(skill.dirPath)}
               className="flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs text-gray-400 hover:text-gray-200 hover:bg-white/5 border border-border transition-colors"
             >
               <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
