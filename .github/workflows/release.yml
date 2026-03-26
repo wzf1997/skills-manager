@@ -6,6 +6,9 @@ on:
       - 'v*'
   workflow_dispatch:
 
+permissions:
+  contents: write
+
 jobs:
   build:
     strategy:
@@ -75,8 +78,8 @@ jobs:
         with:
           tauriScript: pnpm tauri
           args: --target ${{ matrix.target }}
-          tagName: ${{ github.ref_name }}
-          releaseName: 'Skills Manager ${{ github.ref_name }}'
+          tagName: ${{ startsWith(github.ref, 'refs/tags/') && github.ref_name || 'v0.0.0-dev' }}
+          releaseName: 'Skills Manager ${{ startsWith(github.ref, 'refs/tags/') && github.ref_name || ''dev build'' }}'
           releaseBody: 'See changelog for details.'
           releaseDraft: true
           prerelease: false
