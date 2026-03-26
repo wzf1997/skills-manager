@@ -11,6 +11,16 @@ release/
 .env.local
 .env.*.local
 
+*.zip
+*.tar.gz
+*.tar.bz2
+*.tar.xz
+*.tar.lzma
+*.tar.lz
+*.tar.z
+*.tar.bz
+*.tar.bz2
+*.tar.bz2
 # Editor
 .vscode/settings.json
 .idea/
