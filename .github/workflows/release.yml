@@ -45,7 +45,11 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: 20
-          cache: 'npm'
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: latest
 
       - name: Install Rust
         uses: dtolnay/rust-toolchain@stable
@@ -63,7 +67,7 @@ jobs:
             patchelf
 
       - name: Install frontend deps
-        run: npm ci
+        run: pnpm install
 
       - name: Build Tauri app
         uses: tauri-apps/tauri-action@v0
