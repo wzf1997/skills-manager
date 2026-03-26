@@ -173,58 +173,112 @@ ipcMain.handle('skills:install', async (_event, sourceUrl: string, skillSlug?: s
   // 打包后 macOS .app 的 PATH 缺少 Node.js 路径，从 login shell 获取完整 PATH
   const resolvedPath = await getUserPath()
 
-  return new Promise<{ success: boolean; error?: string }>((resolve) => {
-    const proc = spawn('npx', args, {
-      env: { ...process.env, PATH: resolvedPath, FORCE_COLOR: '0' },
-      shell: true,
+  // 执行一次 npx 安装，返回 { output, code }
+  function runInstall(): Promise<{ output: string; code: number }> {
+    return new Promise((resolve) => {
+      const proc = spawn('npx', args, {
+        env: { ...process.env, PATH: resolvedPath, FORCE_COLOR: '0' },
+        shell: true,
+      })
+      let combinedOutput = ''
+      proc.stdout.on('data', (data: Buffer) => {
+        const text = data.toString()
+        combinedOutput += text
+        win?.webContents.send('install:progress', text)
+      })
+      proc.stderr.on('data', (data: Buffer) => {
+        const text = data.toString()
+        combinedOutput += text
+        win?.webContents.send('install:progress', text)
+      })
+      proc.on('close', (code) => resolve({ output: combinedOutput, code: code ?? 1 }))
+      proc.on('error', (err) => resolve({ output: err.message, code: 1 }))
     })
+  }
 
-    proc.stdout.on('data', (data: Buffer) => {
-      win?.webContents.send('install:progress', data.toString())
-    })
-    proc.stderr.on('data', (data: Buffer) => {
-      win?.webContents.send('install:progress', data.toString())
-    })
-    proc.on('close', (code) => {
-      refreshCachedSources()
+  // 从 EACCES 报错中提取需要授权的父目录
+  function extractPermDir(output: string): string | null {
+    // 匹配 "EACCES: permission denied, mkdir '/path/to/dir'"
+    const m = output.match(/EACCES[^']*'([^']+)'/i)
+    if (!m) return null
+    // 取父目录（因为是 mkdir 失败，父目录才需要 chown）
+    return path.dirname(m[1])
+  }
 
-      // 写入 recentInstalls：
-      // - 有 slug：直接按 slug 匹配（不管新旧，重装也记录）
-      // - 无 slug：用 diff；diff 为空时按 mtime 兜底（60s 内修改过的）
-      if (code === 0) {
-        const installTime = Date.now()
-        const afterSkills = scanAllSources(cachedSources)
-        let targetPaths: string[]
-        if (skillSlug) {
-          targetPaths = afterSkills.filter(s => s.slug === skillSlug).map(s => s.dirPath)
-        } else {
-          targetPaths = afterSkills.map(s => s.dirPath).filter(p => !beforeSkills.has(p))
-          // diff 为空：按 mtime 兜底（安装/更新导致目录变动）
-          if (targetPaths.length === 0) {
-            targetPaths = afterSkills
-              .filter(s => { try { return installTime - fs.statSync(s.dirPath).mtimeMs < 60000 } catch { return false } })
-              .map(s => s.dirPath)
-          }
-        }
-        if (targetPaths.length > 0) {
-          const config = getConfig()
-          const existing = config.recentInstalls ?? []
-          const merged = [...targetPaths, ...existing.filter(p => !targetPaths.includes(p))].slice(0, 10)
-          setConfig({ recentInstalls: merged })
-        }
+  let { output, code } = await runInstall()
+
+  // 检查权限错误，弹授权弹窗后自动重试一次
+  const hasPermError = /EACCES|EPERM|permission denied/i.test(output)
+  if (hasPermError) {
+    const permDir = extractPermDir(output)
+    if (permDir) {
+      try {
+        win?.webContents.send('install:progress', `\n⚠️  需要授权访问 ${permDir}，请在弹窗中输入密码...\n`)
+        await requestWritePermission(permDir)
+        win?.webContents.send('install:progress', `✅  授权成功，正在重新安装...\n`)
+        // 重试
+        const retry = await runInstall()
+        output = retry.output
+        code = retry.code
+      } catch (authErr) {
+        const msg = authErr instanceof Error ? authErr.message : String(authErr)
+        return { success: false, error: `授权失败：${msg}` }
       }
+    } else {
+      return { success: false, error: output.match(/(EACCES|EPERM)[^\n]*/i)?.[0] ?? '安装失败（权限不足）' }
+    }
+  }
 
-      win?.webContents.send('sources:updated', cachedSources)
-      if (code === 0) {
-        resolve({ success: true })
-      } else {
-        resolve({ success: false, error: `进程退出码: ${code}` })
+  // 再次检查权限错误（重试后仍失败）
+  if (/EACCES|EPERM|permission denied/i.test(output)) {
+    return { success: false, error: output.match(/(EACCES|EPERM)[^\n]*/i)?.[0] ?? '安装失败（权限不足）' }
+  }
+
+  // 检查 "No matching skills found" 错误（CLI 以 code 0 退出但实际失败）
+  const notFoundMatch = output.match(/No matching skills found for/i)
+  if (code === 0 && notFoundMatch) {
+    const availableMatch = output.match(/Available skills[^\n]*\n([\s\S]+)$/i)
+    const availableHint = availableMatch
+      ? availableMatch[1].replace(/\x1b\[[0-9;]*m/g, '').trim()
+      : ''
+    const errMsg = availableHint ? `Skill 名称不存在，可用的有：\n${availableHint}` : 'Skill 名称不存在'
+    return { success: false, error: errMsg }
+  }
+
+  refreshCachedSources()
+
+  // 写入 recentInstalls：
+  // - 有 slug：直接按 slug 匹配（不管新旧，重装也记录）
+  // - 无 slug：用 diff；diff 为空时按 mtime 兜底（60s 内修改过的）
+  if (code === 0) {
+    const installTime = Date.now()
+    const afterSkills = scanAllSources(cachedSources)
+    let targetPaths: string[]
+    if (skillSlug) {
+      targetPaths = afterSkills.filter(s => s.slug === skillSlug).map(s => s.dirPath)
+    } else {
+      targetPaths = afterSkills.map(s => s.dirPath).filter(p => !beforeSkills.has(p))
+      // diff 为空：按 mtime 兜底（安装/更新导致目录变动）
+      if (targetPaths.length === 0) {
+        targetPaths = afterSkills
+          .filter(s => { try { return installTime - fs.statSync(s.dirPath).mtimeMs < 60000 } catch { return false } })
+          .map(s => s.dirPath)
       }
-    })
-    proc.on('error', (err) => {
-      resolve({ success: false, error: err.message })
-    })
-  })
+    }
+    if (targetPaths.length > 0) {
+      const config = getConfig()
+      const existing = config.recentInstalls ?? []
+      const merged = [...targetPaths, ...existing.filter(p => !targetPaths.includes(p))].slice(0, 10)
+      setConfig({ recentInstalls: merged })
+    }
+  }
+
+  win?.webContents.send('sources:updated', cachedSources)
+  if (code === 0) {
+    return { success: true }
+  } else {
+    return { success: false, error: `进程退出码: ${code}` }
+  }
 })
 
 // ===== 新增：获取热榜 Skills =====

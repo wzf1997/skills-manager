@@ -7,7 +7,7 @@
     "start": "vite",
     "build": "vite build",
     "pack": "npm run build && electron-builder --mac --dir",
-    "dist": "npm run build && electron-builder --mac  --linux && node scripts/post-build.mjs"
+    "dist": "npm run build && electron-builder --mac --linux && node scripts/post-build.mjs"
   },
   "devDependencies": {
     "@types/archiver": "^6.0.3",
@@ -49,21 +49,10 @@
       "icon": "build/icon.icns",
       "target": [
         {
-          "target": "dmg",
+          "target": "dir",
           "arch": [
             "arm64",
             "x64"
-          ]
-        }
-      ]
-    },
-    "win": {
-      "target": [
-        {
-          "target": "nsis",
-          "arch": [
-            "x64",
-            "arm64"
           ]
         }
       ]

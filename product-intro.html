@@ -1,0 +1,540 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Skills Manager — AI 技能包管理工具</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg: #0f0f10;
+      --panel: #18181b;
+      --surface: #1e1e21;
+      --border: #2a2a2e;
+      --accent: #6366f1;
+      --accent2: #8b5cf6;
+      --text: #f4f4f5;
+      --muted: #71717a;
+      --dim: #3f3f46;
+    }
+
+    html { scroll-behavior: smooth; }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      line-height: 1.6;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    /* ── Nav ── */
+    nav {
+      position: fixed; top: 0; left: 0; right: 0; z-index: 100;
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 0 48px; height: 60px;
+      background: rgba(15,15,16,.85);
+      backdrop-filter: blur(16px);
+      border-bottom: 1px solid var(--border);
+    }
+    .nav-logo { display: flex; align-items: center; gap: 10px; font-size: 15px; font-weight: 600; }
+    .nav-logo .icon { width: 28px; height: 28px; background: linear-gradient(135deg,#6366f1,#8b5cf6); border-radius: 7px; display:flex; align-items:center; justify-content:center; font-size:14px; }
+    .nav-links { display: flex; gap: 32px; }
+    .nav-links a { color: var(--muted); text-decoration: none; font-size: 14px; transition: color .2s; }
+    .nav-links a:hover { color: var(--text); }
+    .nav-cta { background: var(--accent); color: #fff; border: none; padding: 8px 20px; border-radius: 8px; font-size: 13px; font-weight: 500; cursor: pointer; transition: opacity .2s; }
+    .nav-cta:hover { opacity: .85; }
+
+    /* ── Hero ── */
+    .hero {
+      min-height: 100vh;
+      display: flex; flex-direction: column; align-items: center; justify-content: center;
+      text-align: center;
+      padding: 120px 24px 80px;
+      position: relative; overflow: hidden;
+    }
+    .hero::before {
+      content: '';
+      position: absolute; top: -200px; left: 50%; transform: translateX(-50%);
+      width: 800px; height: 800px;
+      background: radial-gradient(circle, rgba(99,102,241,.15) 0%, transparent 70%);
+      pointer-events: none;
+    }
+    .hero-badge {
+      display: inline-flex; align-items: center; gap: 6px;
+      background: rgba(99,102,241,.12); border: 1px solid rgba(99,102,241,.3);
+      color: #a5b4fc; font-size: 12px; font-weight: 500;
+      padding: 5px 14px; border-radius: 100px; margin-bottom: 28px;
+    }
+    .hero-badge .dot { width: 6px; height: 6px; background: #6366f1; border-radius: 50%; }
+    .hero h1 {
+      font-size: clamp(36px, 6vw, 72px);
+      font-weight: 700; letter-spacing: -2px; line-height: 1.08;
+      margin-bottom: 24px;
+    }
+    .hero h1 span {
+      background: linear-gradient(135deg,#818cf8,#c084fc);
+      -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+    }
+    .hero p {
+      font-size: clamp(16px, 2vw, 20px);
+      color: var(--muted); max-width: 560px; margin: 0 auto 44px;
+    }
+    .hero-btns { display: flex; gap: 14px; justify-content: center; flex-wrap: wrap; }
+    .btn-primary {
+      background: linear-gradient(135deg,#6366f1,#8b5cf6);
+      color: #fff; border: none; padding: 13px 30px;
+      border-radius: 10px; font-size: 15px; font-weight: 500;
+      cursor: pointer; transition: opacity .2s, transform .15s;
+    }
+    .btn-primary:hover { opacity: .9; transform: translateY(-1px); }
+    .btn-secondary {
+      background: transparent; color: var(--text);
+      border: 1px solid var(--border); padding: 13px 30px;
+      border-radius: 10px; font-size: 15px; cursor: pointer;
+      transition: border-color .2s, background .2s;
+    }
+    .btn-secondary:hover { border-color: var(--dim); background: var(--surface); }
+
+    /* ── Window mockup ── */
+    .window-wrap {
+      margin: 72px auto 0;
+      max-width: 900px; width: 100%;
+      border-radius: 14px;
+      border: 1px solid var(--border);
+      overflow: hidden;
+      box-shadow: 0 40px 120px rgba(0,0,0,.6), 0 0 0 1px rgba(255,255,255,.04);
+    }
+    .window-bar {
+      background: #1a1a1d;
+      padding: 12px 16px;
+      display: flex; align-items: center; gap: 8px;
+      border-bottom: 1px solid var(--border);
+    }
+    .traffic { width: 12px; height: 12px; border-radius: 50%; }
+    .t-red { background: #ff5f57; }
+    .t-yellow { background: #febc2e; }
+    .t-green { background: #28c840; }
+    .window-title { flex: 1; text-align: center; font-size: 12px; color: var(--muted); margin-left: -56px; }
+    .window-body {
+      display: flex;
+      background: var(--bg);
+      height: 440px;
+    }
+    /* Sidebar */
+    .mock-sidebar {
+      width: 200px; flex-shrink: 0;
+      background: var(--panel);
+      border-right: 1px solid var(--border);
+      padding: 14px 10px;
+    }
+    .mock-sidebar-title { font-size: 10px; color: var(--muted); font-weight: 600; letter-spacing: .08em; padding: 0 8px; margin-bottom: 8px; }
+    .mock-nav-item {
+      display: flex; align-items: center; gap: 8px;
+      padding: 6px 10px; border-radius: 7px; font-size: 12.5px;
+      color: var(--muted); cursor: default;
+      transition: background .15s;
+    }
+    .mock-nav-item.active { background: rgba(99,102,241,.15); color: #a5b4fc; }
+    .mock-dot { width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; }
+    .mock-count { margin-left: auto; font-size: 10px; background: var(--surface); padding: 1px 6px; border-radius: 10px; }
+    .mock-divider { height: 1px; background: var(--border); margin: 8px 0; }
+    /* Main */
+    .mock-main { flex: 1; display: flex; flex-direction: column; min-width: 0; }
+    .mock-toolbar {
+      height: 44px; border-bottom: 1px solid var(--border);
+      display: flex; align-items: center; gap: 10px; padding: 0 14px;
+      background: var(--panel);
+    }
+    .mock-tab {
+      font-size: 12px; padding: 4px 12px; border-radius: 6px; color: var(--muted);
+    }
+    .mock-tab.active { background: rgba(99,102,241,.15); color: #a5b4fc; }
+    .mock-search {
+      flex: 1; background: var(--surface); border: 1px solid var(--border);
+      border-radius: 7px; height: 26px; padding: 0 10px;
+      font-size: 11px; color: var(--muted);
+      display: flex; align-items: center; gap: 5px;
+    }
+    .mock-grid {
+      flex: 1; padding: 14px; overflow: hidden;
+      display: grid; grid-template-columns: repeat(3,1fr); gap: 10px; align-content: start;
+    }
+    .mock-card {
+      background: var(--panel); border: 1px solid var(--border);
+      border-radius: 10px; padding: 12px;
+    }
+    .mock-card.selected { border-color: #6366f1; box-shadow: 0 0 0 2px rgba(99,102,241,.25); }
+    .mock-card-slug { font-size: 11.5px; font-weight: 600; color: var(--text); margin-bottom: 3px; }
+    .mock-card-desc { font-size: 10px; color: var(--muted); line-height: 1.4; margin-bottom: 6px; }
+    .mock-tags { display: flex; gap: 4px; flex-wrap: wrap; }
+    .mock-tag { font-size: 9.5px; background: var(--surface); border: 1px solid var(--border); color: var(--muted); padding: 1px 6px; border-radius: 4px; }
+    .mock-card-footer { display: flex; align-items: center; gap: 5px; margin-top: 7px; }
+    .mock-src-dot { width: 5px; height: 5px; border-radius: 50%; }
+    .mock-src-name { font-size: 9.5px; color: var(--dim); }
+    .mock-card-size { margin-left: auto; font-size: 9.5px; color: var(--dim); }
+
+    /* ── Stats ── */
+    .stats-section {
+      padding: 80px 48px;
+      display: flex; justify-content: center;
+      border-top: 1px solid var(--border);
+      border-bottom: 1px solid var(--border);
+    }
+    .stats-inner { display: flex; gap: 80px; flex-wrap: wrap; justify-content: center; }
+    .stat { text-align: center; }
+    .stat-num { font-size: 44px; font-weight: 700; letter-spacing: -1.5px; background: linear-gradient(135deg,#818cf8,#c084fc); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+    .stat-label { font-size: 14px; color: var(--muted); margin-top: 4px; }
+
+    /* ── Features ── */
+    section { padding: 100px 48px; max-width: 1100px; margin: 0 auto; }
+    .section-label { font-size: 12px; font-weight: 600; color: #6366f1; letter-spacing: .1em; text-transform: uppercase; margin-bottom: 16px; }
+    .section-title { font-size: clamp(28px, 4vw, 44px); font-weight: 700; letter-spacing: -1px; margin-bottom: 16px; }
+    .section-desc { font-size: 17px; color: var(--muted); max-width: 540px; margin-bottom: 60px; }
+
+    .features-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 20px; }
+    .feature-card {
+      background: var(--panel); border: 1px solid var(--border);
+      border-radius: 14px; padding: 28px;
+      transition: border-color .2s, transform .2s;
+    }
+    .feature-card:hover { border-color: var(--dim); transform: translateY(-3px); }
+    .feature-icon {
+      width: 44px; height: 44px; border-radius: 11px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 20px; margin-bottom: 18px;
+    }
+    .feature-title { font-size: 16px; font-weight: 600; margin-bottom: 9px; }
+    .feature-desc { font-size: 14px; color: var(--muted); line-height: 1.65; }
+
+    /* ── How it works ── */
+    .steps { display: flex; flex-direction: column; gap: 0; }
+    .step {
+      display: flex; gap: 28px; align-items: flex-start;
+      padding: 36px 0;
+      border-bottom: 1px solid var(--border);
+    }
+    .step:last-child { border-bottom: none; }
+    .step-num {
+      width: 40px; height: 40px; flex-shrink: 0;
+      background: rgba(99,102,241,.12); border: 1px solid rgba(99,102,241,.3);
+      border-radius: 10px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 14px; font-weight: 700; color: #a5b4fc;
+    }
+    .step-body h3 { font-size: 17px; font-weight: 600; margin-bottom: 8px; }
+    .step-body p { font-size: 14.5px; color: var(--muted); line-height: 1.65; }
+
+    /* ── Sources ── */
+    .sources-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+      gap: 12px;
+      margin-top: 48px;
+    }
+    .source-pill {
+      display: flex; align-items: center; gap: 9px;
+      background: var(--panel); border: 1px solid var(--border);
+      border-radius: 10px; padding: 12px 16px;
+      font-size: 13px; font-weight: 500; color: var(--muted);
+      transition: border-color .2s, color .2s;
+    }
+    .source-pill:hover { border-color: var(--dim); color: var(--text); }
+    .source-pill .sdot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+
+    /* ── CTA ── */
+    .cta-section {
+      text-align: center;
+      padding: 100px 24px;
+      background: linear-gradient(to bottom, var(--bg), #12121a);
+      border-top: 1px solid var(--border);
+    }
+    .cta-section h2 { font-size: clamp(28px,5vw,52px); font-weight: 700; letter-spacing: -1.5px; margin-bottom: 18px; }
+    .cta-section p { font-size: 18px; color: var(--muted); margin-bottom: 44px; }
+    .cta-platform { display: inline-flex; align-items: center; gap: 7px; font-size: 12px; color: var(--dim); margin-top: 20px; }
+
+    /* ── Footer ── */
+    footer {
+      border-top: 1px solid var(--border);
+      padding: 32px 48px;
+      display: flex; align-items: center; justify-content: space-between;
+      font-size: 13px; color: var(--muted);
+    }
+    footer a { color: var(--muted); text-decoration: none; }
+    footer a:hover { color: var(--text); }
+
+    /* scrollbar */
+    ::-webkit-scrollbar { width: 6px; }
+    ::-webkit-scrollbar-track { background: var(--bg); }
+    ::-webkit-scrollbar-thumb { background: var(--dim); border-radius: 3px; }
+
+    @media (max-width: 768px) {
+      nav { padding: 0 20px; }
+      .nav-links { display: none; }
+      section { padding: 70px 20px; }
+      .stats-section { padding: 60px 20px; }
+      .stats-inner { gap: 48px; }
+      .window-body { height: 280px; }
+      .mock-sidebar { width: 140px; }
+      .mock-grid { grid-template-columns: repeat(2,1fr); }
+      footer { flex-direction: column; gap: 12px; text-align: center; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- Nav -->
+<nav>
+  <div class="nav-logo">
+    <div class="icon">🧩</div>
+    Skills Manager
+  </div>
+  <div class="nav-links">
+    <a href="#features">功能</a>
+    <a href="#how">使用方式</a>
+    <a href="#sources">支持工具</a>
+  </div>
+  <button class="nav-cta">下载 for macOS</button>
+</nav>
+
+<!-- Hero -->
+<section class="hero" style="max-width:100%;padding-top:140px;">
+  <div class="hero-badge"><span class="dot"></span> 专为 AI 编程工具打造</div>
+  <h1>统一管理你的<br/><span>AI Skills</span></h1>
+  <p>一款 macOS 原生应用，自动发现本机所有 AI 工具的 Skills 目录，让你轻松浏览、同步和安装技能包。</p>
+  <div class="hero-btns">
+    <button class="btn-primary">⬇ 下载 DMG</button>
+    <button class="btn-secondary">查看文档</button>
+  </div>
+
+  <!-- Window mockup -->
+  <div class="window-wrap">
+    <div class="window-bar">
+      <div class="traffic t-red"></div>
+      <div class="traffic t-yellow"></div>
+      <div class="traffic t-green"></div>
+      <div class="window-title">Skills Manager</div>
+    </div>
+    <div class="window-body">
+      <!-- Sidebar -->
+      <div class="mock-sidebar">
+        <div class="mock-sidebar-title">来源</div>
+        <div class="mock-nav-item active">
+          <div class="mock-dot" style="background:#a1a1aa"></div>
+          全部
+          <div class="mock-count">48</div>
+        </div>
+        <div class="mock-nav-item">
+          <div class="mock-dot" style="background:#4ade80"></div>
+          最近安装
+          <div class="mock-count">3</div>
+        </div>
+        <div class="mock-divider"></div>
+        <div class="mock-nav-item">
+          <div class="mock-dot" style="background:#f97316"></div>
+          Claude Code
+          <div class="mock-count">21</div>
+        </div>
+        <div class="mock-nav-item">
+          <div class="mock-dot" style="background:#06b6d4"></div>
+          Cursor
+          <div class="mock-count">14</div>
+        </div>
+        <div class="mock-nav-item">
+          <div class="mock-dot" style="background:#a78bfa"></div>
+          Windsurf
+          <div class="mock-count">9</div>
+        </div>
+        <div class="mock-nav-item">
+          <div class="mock-dot" style="background:#22d3ee"></div>
+          Gemini CLI
+          <div class="mock-count">4</div>
+        </div>
+      </div>
+      <!-- Main -->
+      <div class="mock-main">
+        <div class="mock-toolbar">
+          <div class="mock-tab active">🗂 本地</div>
+          <div class="mock-tab">🔥 热榜</div>
+          <div class="mock-search">
+            <span style="font-size:10px">🔍</span>
+            <span>搜索 Skills…</span>
+          </div>
+          <div style="font-size:11px;color:#6366f1;margin-left:auto;">已选 2</div>
+        </div>
+        <div class="mock-grid">
+          <div class="mock-card selected">
+            <div class="mock-card-slug">frontend-design</div>
+            <div class="mock-card-desc">高质量前端界面设计与实现指导技能包</div>
+            <div class="mock-tags"><div class="mock-tag">UI</div><div class="mock-tag">React</div></div>
+            <div class="mock-card-footer"><div class="mock-src-dot" style="background:#f97316"></div><div class="mock-src-name">Claude Code</div><div class="mock-card-size">18 KB</div></div>
+          </div>
+          <div class="mock-card selected">
+            <div class="mock-card-slug">data-analysis</div>
+            <div class="mock-card-desc">全链路数据分析技能，支持 CSV/Excel/PDF</div>
+            <div class="mock-tags"><div class="mock-tag">Python</div><div class="mock-tag">Pandas</div></div>
+            <div class="mock-card-footer"><div class="mock-src-dot" style="background:#f97316"></div><div class="mock-src-name">Claude Code</div><div class="mock-card-size">12 KB</div></div>
+          </div>
+          <div class="mock-card">
+            <div class="mock-card-slug">github-api</div>
+            <div class="mock-card-desc">GitHub API 集成，管理 Issue 和 PR</div>
+            <div class="mock-tags"><div class="mock-tag">GitHub</div><div class="mock-tag">API</div></div>
+            <div class="mock-card-footer"><div class="mock-src-dot" style="background:#06b6d4"></div><div class="mock-src-name">Cursor</div><div class="mock-card-size">9 KB</div></div>
+          </div>
+          <div class="mock-card">
+            <div class="mock-card-slug">tdd-workflow</div>
+            <div class="mock-card-desc">测试驱动开发，强制 80%+ 测试覆盖率</div>
+            <div class="mock-tags"><div class="mock-tag">TDD</div><div class="mock-tag">Testing</div></div>
+            <div class="mock-card-footer"><div class="mock-src-dot" style="background:#a78bfa"></div><div class="mock-src-name">Windsurf</div><div class="mock-card-size">7 KB</div></div>
+          </div>
+          <div class="mock-card">
+            <div class="mock-card-slug">browser-use</div>
+            <div class="mock-card-desc">浏览器自动化，截图与数据提取</div>
+            <div class="mock-tags"><div class="mock-tag">Browser</div><div class="mock-tag">Playwright</div></div>
+            <div class="mock-card-footer"><div class="mock-src-dot" style="background:#f97316"></div><div class="mock-src-name">Claude Code</div><div class="mock-card-size">11 KB</div></div>
+          </div>
+          <div class="mock-card">
+            <div class="mock-card-slug">mcp-builder</div>
+            <div class="mock-card-desc">构建高质量 MCP Server 的设计指南</div>
+            <div class="mock-tags"><div class="mock-tag">MCP</div><div class="mock-tag">API</div></div>
+            <div class="mock-card-footer"><div class="mock-src-dot" style="background:#22d3ee"></div><div class="mock-src-name">Gemini CLI</div><div class="mock-card-size">6 KB</div></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- Stats -->
+<div class="stats-section">
+  <div class="stats-inner">
+    <div class="stat"><div class="stat-num">50+</div><div class="stat-label">支持 AI 工具</div></div>
+    <div class="stat"><div class="stat-num">4层</div><div class="stat-label">自动扫描深度</div></div>
+    <div class="stat"><div class="stat-num">0配置</div><div class="stat-label">即装即用</div></div>
+    <div class="stat"><div class="stat-num">∞</div><div class="stat-label">跨工具同步</div></div>
+  </div>
+</div>
+
+<!-- Features -->
+<section id="features">
+  <div class="section-label">核心功能</div>
+  <div class="section-title">一切你需要的<br/>技能包管理能力</div>
+  <p class="section-desc">从自动发现到一键同步，Skills Manager 让 AI Skills 的管理变得前所未有的简单。</p>
+
+  <div class="features-grid">
+    <div class="feature-card">
+      <div class="feature-icon" style="background:rgba(99,102,241,.12)">🔍</div>
+      <div class="feature-title">自动发现来源</div>
+      <div class="feature-desc">递归扫描 $HOME 目录，自动识别 Claude Code、Cursor、Windsurf 等 50+ 种 AI 工具的 Skills 目录，无需手动配置。</div>
+    </div>
+    <div class="feature-card">
+      <div class="feature-icon" style="background:rgba(139,92,246,.12)">🔗</div>
+      <div class="feature-title">跨工具同步</div>
+      <div class="feature-desc">右键一键将 Skill 复制或软链接到其他工具。软链接优先，跨卷时自动降级物理复制，改一处处处更新。</div>
+    </div>
+    <div class="feature-card">
+      <div class="feature-icon" style="background:rgba(34,211,238,.1)">📦</div>
+      <div class="feature-title">在线安装</div>
+      <div class="feature-desc">输入 GitHub 地址直接安装，实时查看安装日志。权限不足时自动弹出系统授权弹窗并重试，无需手动操作。</div>
+    </div>
+    <div class="feature-card">
+      <div class="feature-icon" style="background:rgba(251,146,60,.1)">🔥</div>
+      <div class="feature-title">热榜 Hub</div>
+      <div class="feature-desc">内置社区精选 Skill 热榜，支持分类浏览、搜索和一键安装。发现最受欢迎的 AI 技能包，拓展你的工具库。</div>
+    </div>
+    <div class="feature-card">
+      <div class="feature-icon" style="background:rgba(74,222,128,.1)">✏️</div>
+      <div class="feature-title">来源管理</div>
+      <div class="feature-desc">手动添加自定义目录，双击来源名称内联重命名。所有配置持久化存储，重启应用后状态完整保留。</div>
+    </div>
+    <div class="feature-card">
+      <div class="feature-icon" style="background:rgba(251,191,36,.1)">🎨</div>
+      <div class="feature-title">原生体验</div>
+      <div class="feature-desc">深色主题，macOS 风格 hiddenInset 标题栏，可拖拽侧边栏，自动跟随系统深色/浅色模式切换。</div>
+    </div>
+  </div>
+</section>
+
+<!-- How it works -->
+<section id="how" style="border-top:1px solid var(--border);">
+  <div class="section-label">使用方式</div>
+  <div class="section-title">三步开始管理</div>
+  <p class="section-desc">安装即用，无需任何初始配置。</p>
+
+  <div class="steps">
+    <div class="step">
+      <div class="step-num">01</div>
+      <div class="step-body">
+        <h3>安装并打开应用</h3>
+        <p>下载 DMG，拖入应用程序文件夹。首次启动时，应用会自动扫描 $HOME 目录，在数秒内发现你机器上所有 AI 工具的 Skills 来源，无需任何配置。</p>
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-num">02</div>
+      <div class="step-body">
+        <h3>浏览和管理 Skills</h3>
+        <p>在本地 Tab 中浏览所有已安装的 Skills。点击卡片查看完整 SKILL.md 文档，右键可将某个 Skill 同步到其他 AI 工具，或直接删除。</p>
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-num">03</div>
+      <div class="step-body">
+        <h3>在线安装或从热榜发现</h3>
+        <p>点击工具栏「安装」按钮，输入 GitHub 地址安装新 Skill；或切换到「🔥 热榜」Tab，浏览社区推荐，一键安装到你的工具中。</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- Supported Sources -->
+<section id="sources" style="border-top:1px solid var(--border);">
+  <div class="section-label">支持工具</div>
+  <div class="section-title">自动识别 50+ 种工具</div>
+  <p class="section-desc">无论你使用哪款 AI 编程助手，Skills Manager 都能自动发现并统一管理。</p>
+  <div class="sources-grid">
+    <div class="source-pill"><span class="sdot" style="background:#f97316"></span>Claude Code</div>
+    <div class="source-pill"><span class="sdot" style="background:#06b6d4"></span>Cursor</div>
+    <div class="source-pill"><span class="sdot" style="background:#a78bfa"></span>Windsurf</div>
+    <div class="source-pill"><span class="sdot" style="background:#22d3ee"></span>Gemini CLI</div>
+    <div class="source-pill"><span class="sdot" style="background:#60a5fa"></span>GitHub Copilot</div>
+    <div class="source-pill"><span class="sdot" style="background:#34d399"></span>Cline</div>
+    <div class="source-pill"><span class="sdot" style="background:#fb923c"></span>Roo Code</div>
+    <div class="source-pill"><span class="sdot" style="background:#e879f9"></span>Augment</div>
+    <div class="source-pill"><span class="sdot" style="background:#f59e0b"></span>Aider</div>
+    <div class="source-pill"><span class="sdot" style="background:#818cf8"></span>OpenClaw</div>
+    <div class="source-pill"><span class="sdot" style="background:#4ade80"></span>DewuClaw</div>
+    <div class="source-pill"><span class="sdot" style="background:#94a3b8"></span>更多 40+…</div>
+  </div>
+</section>
+
+<!-- CTA -->
+<div class="cta-section">
+  <h2>立即开始管理<br/>你的 AI Skills</h2>
+  <p>免费下载，仅支持 macOS（Apple Silicon + Intel 通用）</p>
+  <div>
+    <button class="btn-primary" style="font-size:17px;padding:15px 40px;">⬇ 下载 Skills Manager</button>
+  </div>
+  <div class="cta-platform">
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M18.71 19.5c-.83 1.24-1.71 2.45-3.05 2.47-1.34.03-1.77-.79-3.29-.79-1.53 0-2 .77-3.27.82-1.31.05-2.3-1.32-3.14-2.53C4.25 17 2.94 12.45 4.7 9.39c.87-1.52 2.43-2.48 4.12-2.51 1.28-.02 2.5.87 3.29.87.78 0 2.26-1.07 3.8-.91.65.03 2.47.26 3.64 1.98-.09.06-2.17 1.28-2.15 3.81.03 3.02 2.65 4.03 2.68 4.04-.03.07-.42 1.44-1.38 2.83M13 3.5c.73-.83 1.94-1.46 2.94-1.5.13 1.17-.34 2.35-1.04 3.19-.69.85-1.83 1.51-2.95 1.42-.15-1.15.41-2.35 1.05-3.11z"/></svg>
+    macOS 12 及以上 · Apple Silicon + Intel 通用二进制
+  </div>
+</div>
+
+<!-- Footer -->
+<footer>
+  <div style="display:flex;align-items:center;gap:10px;">
+    <div style="width:22px;height:22px;background:linear-gradient(135deg,#6366f1,#8b5cf6);border-radius:5px;display:flex;align-items:center;justify-content:center;font-size:11px;">🧩</div>
+    <span>Skills Manager</span>
+    <span style="color:var(--dim)">·</span>
+    <span style="color:var(--dim)">com.dewu.skills-manager</span>
+  </div>
+  <div style="display:flex;gap:24px;">
+    <a href="#">安装说明</a>
+    <a href="#">产品功能报告</a>
+    <a href="#">GitHub</a>
+  </div>
+</footer>
+
+</body>
+</html>

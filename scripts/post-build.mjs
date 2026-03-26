@@ -15,15 +15,16 @@ const RELEASE_DIR = path.resolve('release')
 const APP_NAME = 'Skills Manager'
 const DESKTOP = path.join(os.homedir(), 'Desktop')
 
-// 找到打包出来的 .app
-const macDir = fs.readdirSync(RELEASE_DIR).find(d => d.startsWith('mac-'))
-if (!macDir) { console.error('❌ 找不到 mac-* 目录'); process.exit(1) }
+const entries = fs.readdirSync(RELEASE_DIR)
+const macDir =
+  entries.includes('mac-arm64') ? 'mac-arm64' : entries.includes('mac') ? 'mac' : entries.find(d => d.startsWith('mac-'))
+if (!macDir) { console.error('❌ 找不到 mac / mac-* 目录'); process.exit(1) }
 
 const appPath = path.join(RELEASE_DIR, macDir, `${APP_NAME}.app`)
 if (!fs.existsSync(appPath)) { console.error(`❌ 找不到 ${appPath}`); process.exit(1) }
 
 const version = JSON.parse(fs.readFileSync('package.json', 'utf8')).version
-const arch = macDir.replace('mac-', '') // arm64 / x64
+const arch = macDir === 'mac' ? 'x64' : macDir.startsWith('mac-') ? macDir.slice(4) : macDir
 const dmgName = `${APP_NAME}-${version}-${arch}.dmg`
 const dmgOut = path.join(DESKTOP, dmgName)
 
