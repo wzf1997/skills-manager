@@ -2,7 +2,6 @@
   "name": "skills-manager",
   "version": "1.0.0",
   "description": "Skills Manager - 跨平台 AI Skills 管理工具",
-  "main": "dist-electron/main/index.js",
   "scripts": {
     "dev": "vite",
     "build": "vite build",
@@ -18,93 +17,21 @@
     "@types/react-dom": "^18.3.0",
     "@vitejs/plugin-react": "^4.3.1",
     "autoprefixer": "^10.4.19",
-    "electron": "^31.0.0",
-    "electron-builder": "^24.13.3",
     "postcss": "^8.4.38",
     "tailwindcss": "^3.4.4",
     "typescript": "^5.4.5",
-    "vite": "^5.3.1",
-    "vite-plugin-electron": "^0.28.7",
-    "vite-plugin-electron-renderer": "^0.14.5"
+    "vite": "^5.3.1"
   },
   "dependencies": {
     "@tauri-apps/api": "^2.10.1",
     "@types/marked": "^6.0.0",
-    "archiver": "^7.0.1",
-    "electron-store": "^8.2.0",
-    "gray-matter": "^4.0.3",
     "marked": "^17.0.5",
     "react": "^18.3.1",
     "react-dom": "^18.3.1"
   },
   "pnpm": {
     "onlyBuiltDependencies": [
-      "electron",
       "esbuild"
-    ]
-  },
-  "build": {
-    "appId": "com.fly.skills-manager",
-    "productName": "Skills Manager",
-    "copyright": "Copyright © 2025 FlyClaw",
-    "mac": {
-      "category": "public.app-category.developer-tools",
-      "icon": "build/icon.icns",
-      "target": [
-        {
-          "target": "dir",
-          "arch": [
-            "arm64",
-            "x64"
-          ]
-        }
-      ]
-    },
-    "linux": {
-      "target": [
-        {
-          "target": "AppImage",
-          "arch": [
-            "x64",
-            "arm64"
-          ]
-        }
-      ],
-      "category": "Development"
-    },
-    "dmg": {
-      "title": "Skills Manager",
-      "contents": [
-        {
-          "x": 130,
-          "y": 220
-        },
-        {
-          "x": 410,
-          "y": 220,
-          "type": "link",
-          "path": "/Applications"
-        }
-      ],
-      "window": {
-        "width": 540,
-        "height": 380
-      }
-    },
-    "files": [
-      "dist/**/*",
-      "dist-electron/**/*"
-    ],
-    "directories": {
-      "buildResources": "build",
-      "output": "release"
-    },
-    "asar": true,
-    "asarUnpack": [
-      "node_modules/archiver/**",
-      "node_modules/archiver-utils/**",
-      "node_modules/zip-stream/**",
-      "node_modules/electron-store/**"
     ]
   }
 }

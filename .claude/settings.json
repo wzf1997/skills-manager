@@ -5,7 +5,14 @@
       "Bash(node --version)",
       "Bash(python3 -c \"import json,sys; d=json.load\\(sys.stdin\\); print\\(d.get\\(''scripts'',{}\\)\\)\")",
       "Bash(gh repo create wzf1997/skills-manager --public --source=. --remote=origin --push)",
-      "Read(//opt/homebrew/bin/**)"
+      "Read(//opt/homebrew/bin/**)",
+      "Bash(npm install --save-dev @tauri-apps/cli@^2 --loglevel error)",
+      "Bash(pnpm --version)",
+      "Bash(pnpm add -D @tauri-apps/cli@^2)",
+      "Bash(pnpm add @tauri-apps/api@^2)",
+      "Bash(cargo check)",
+      "Bash(rustc --version)",
+      "Bash(rustup show active-toolchain)"
     ]
   }
 }
