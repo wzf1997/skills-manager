@@ -8,7 +8,7 @@ import type { SkillSource } from '../types'
 const KNOWN_TOOLS: Record<string, { label: string; color: string }> = {
   // ── 现有 ──
   '.claude':      { label: 'Claude Code',    color: '#f97316' },
-  '.dewuclaw':    { label: 'DewuClaw',       color: '#ec4899' },
+  '.flyclaw':     { label: 'FlyClaw',        color: '#ec4899' },
   '.openclaw':    { label: 'OpenClaw',       color: '#8b5cf6' },
   '.agents':      { label: 'Agents',         color: '#10b981' },
   '.comate':      { label: 'Comate',         color: '#3b82f6' },

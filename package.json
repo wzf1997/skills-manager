@@ -41,9 +41,9 @@
     ]
   },
   "build": {
-    "appId": "com.dewu.skills-manager",
+    "appId": "com.fly.skills-manager",
     "productName": "Skills Manager",
-    "copyright": "Copyright © 2025 DewuClaw",
+    "copyright": "Copyright © 2025 FlyClaw",
     "mac": {
       "category": "public.app-category.developer-tools",
       "icon": "build/icon.icns",

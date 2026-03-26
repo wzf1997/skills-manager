@@ -4,7 +4,7 @@
  *  1. 对 .app 做 ad-hoc 自签名（--deep --force）
  *  2. 重新打包成干净的 DMG（含 Applications 快捷方式）
  *  3. 对 DMG 签名 + 清除 quarantine 属性
- *  4. 复制 DMG 到桌面
+ *  4. CI 环境（CI=true）输出到 release/ 目录，本地开发输出到桌面
  */
 import { execSync } from 'child_process'
 import fs from 'fs'
@@ -26,7 +26,10 @@ if (!fs.existsSync(appPath)) { console.error(`❌ 找不到 ${appPath}`); proces
 const version = JSON.parse(fs.readFileSync('package.json', 'utf8')).version
 const arch = macDir === 'mac' ? 'x64' : macDir.startsWith('mac-') ? macDir.slice(4) : macDir
 const dmgName = `${APP_NAME}-${version}-${arch}.dmg`
-const dmgOut = path.join(DESKTOP, dmgName)
+// CI 环境（GitHub Actions 自动注入 CI=true）输出到 release/ 目录，本地开发输出到桌面
+const isCI = process.env.CI === 'true'
+const dmgDest = isCI ? path.join(RELEASE_DIR, dmgName) : path.join(DESKTOP, dmgName)
+const destLabel = isCI ? `release/${dmgName}` : `~/Desktop/${dmgName}`
 
 console.log(`\n🔐 Step 1: 对 .app 做 ad-hoc 自签名...`)
 execSync(`codesign --deep --force --sign - "${appPath}"`, { stdio: 'inherit' })
@@ -50,10 +53,10 @@ execSync(`codesign --force --sign - "${tmpDmg}"`)
 execSync(`xattr -cr "${tmpDmg}"`)
 console.log('✅ DMG 签名 + 清除属性完成')
 
-console.log(`\n📋 Step 4: 复制到桌面...`)
-fs.copyFileSync(tmpDmg, dmgOut)
+console.log(`\n📋 Step 4: 输出 DMG...`)
+fs.copyFileSync(tmpDmg, dmgDest)
 fs.rmSync(tmpDmg)
-console.log(`✅ 已输出到桌面: ${dmgName}`)
+console.log(`✅ 已输出: ${destLabel}`)
 
-console.log(`\n🎉 打包完成！文件: ~/Desktop/${dmgName}`)
-console.log(`   大小: ${(fs.statSync(dmgOut).size / 1024 / 1024).toFixed(1)} MB`)
+console.log(`\n🎉 打包完成！文件: ${destLabel}`)
+console.log(`   大小: ${(fs.statSync(dmgDest).size / 1024 / 1024).toFixed(1)} MB`)

@@ -69,7 +69,7 @@ xattr -cr "/Applications/Skills Manager.app"
 | 🟤 | Augment | `.augment` |
 | 🟡 | Aider | `.aider` |
 | 🟣 | OpenClaw | `.openclaw` |
-| 🟢 | DewuClaw | `.dewuclaw` |
+| 🟢 | FlyClaw | `.flyclaw` |
 | ⚪ | 更多 40+ 种 | 自动识别 |
 
 ---
