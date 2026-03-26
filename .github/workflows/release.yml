@@ -12,35 +12,29 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          # macOS ARM64
+          # macOS ARM64 (.dmg / .app)
           - os: macos-latest
             target: aarch64-apple-darwin
-            args: '--target aarch64-apple-darwin'
 
-          # macOS x86_64
+          # macOS x86_64 (.dmg / .app)
           - os: macos-latest
             target: x86_64-apple-darwin
-            args: '--target x86_64-apple-darwin'
 
-          # Windows x64
+          # Windows x64 (.exe / .msi)
           - os: windows-latest
             target: x86_64-pc-windows-msvc
-            args: '--target x86_64-pc-windows-msvc'
 
-          # Windows ARM64
+          # Windows ARM64 (.exe / .msi)  — MSVC ARM64 已预装在 windows-latest runner
           - os: windows-latest
             target: aarch64-pc-windows-msvc
-            args: '--target aarch64-pc-windows-msvc'
 
-          # Linux x86_64
+          # Linux x86_64 (.AppImage / .deb)
           - os: ubuntu-22.04
             target: x86_64-unknown-linux-gnu
-            args: '--target x86_64-unknown-linux-gnu'
 
-          # Linux ARM64 (native runner)
+          # Linux ARM64 (.AppImage / .deb)  — 原生 ARM runner，私有仓库需 GitHub Team/Enterprise
           - os: ubuntu-22.04-arm
             target: aarch64-unknown-linux-gnu
-            args: '--target aarch64-unknown-linux-gnu'
 
     runs-on: ${{ matrix.os }}
 
@@ -58,8 +52,8 @@ jobs:
         with:
           targets: ${{ matrix.target }}
 
-      - name: Install Linux deps (x86_64)
-        if: matrix.os == 'ubuntu-22.04'
+      - name: Install Linux system dependencies
+        if: startsWith(matrix.os, 'ubuntu')
         run: |
           sudo apt-get update
           sudo apt-get install -y \
@@ -67,26 +61,6 @@ jobs:
             libappindicator3-dev \
             librsvg2-dev \
             patchelf
-
-      - name: Install Linux deps (ARM64)
-        if: matrix.os == 'ubuntu-22.04-arm'
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y \
-            libwebkit2gtk-4.1-dev \
-            libappindicator3-dev \
-            librsvg2-dev \
-            patchelf
-
-      - name: Add MSVC ARM64 target (Windows ARM64 only)
-        if: matrix.target == 'aarch64-pc-windows-msvc'
-        shell: pwsh
-        run: |
-          # Install ARM64 MSVC build tools via VS installer
-          $vsInstaller = "${env:ProgramFiles(x86)}\Microsoft Visual Studio\Installer\vs_installer.exe"
-          & $vsInstaller modify --installPath "C:\Program Files\Microsoft Visual Studio\2022\Enterprise" `
-            --add Microsoft.VisualStudio.Component.VC.Tools.ARM64 --quiet --norestart | Out-Null
-          Write-Host "ARM64 MSVC tools installed"
 
       - name: Install frontend deps
         run: npm ci
@@ -96,7 +70,7 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
-          args: ${{ matrix.args }}
+          args: --target ${{ matrix.target }}
           tagName: ${{ github.ref_name }}
           releaseName: 'Skills Manager ${{ github.ref_name }}'
           releaseBody: 'See changelog for details.'
