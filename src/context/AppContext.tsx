@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useReducer, useCallback, ReactNode } from 'react'
 import type { SkillSource, SkillMeta, AppConfig } from '../types'
+import { api } from '../api'
 
 interface State {
   sources: SkillSource[]
@@ -84,9 +85,11 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const refresh = useCallback(async () => {
     dispatch({ type: 'SET_LOADING', loading: true })
     try {
-      const config = await window.electronAPI.getConfig()
-      const sources = await window.electronAPI.discoverSources()
-      const skills = await window.electronAPI.scanAllSkills()
+      const [config, sources, skills] = await Promise.all([
+        api.getConfig(),
+        api.discoverSources(),
+        api.scanAllSkills(),
+      ])
       dispatch({ type: 'SET_SOURCES', sources })
       dispatch({ type: 'SET_SKILLS', skills })
       dispatch({ type: 'SET_CONFIG', config })

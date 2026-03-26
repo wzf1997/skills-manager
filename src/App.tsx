@@ -9,31 +9,36 @@ import { ResizableSidebar } from './components/ResizableSidebar'
 import { SkillDetailPanel } from './components/SkillDetailPanel'
 import { InstallModal } from './components/InstallModal'
 import { HubPanel } from './components/HubPanel'
+import { api } from './api'
 
 function AppContent() {
   const { state, dispatch, refresh } = useApp()
 
   useEffect(() => {
-    // 初始化主题
-    window.electronAPI.getTheme().then(theme => {
-      dispatch({ type: 'SET_THEME', theme })
-      document.documentElement.classList.toggle('dark', theme === 'dark')
-    })
+    // Theme: use matchMedia instead of IPC
+    const dark = window.matchMedia('(prefers-color-scheme: dark)').matches
+    dispatch({ type: 'SET_THEME', theme: dark ? 'dark' : 'light' })
+    document.documentElement.classList.toggle('dark', dark)
 
-    // 监听系统主题变化
-    const offTheme = window.electronAPI.onThemeChange((_event, theme) => {
-      dispatch({ type: 'SET_THEME', theme })
-      document.documentElement.classList.toggle('dark', theme === 'dark')
-    })
+    const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)')
+    const handleThemeChange = (e: MediaQueryListEvent) => {
+      dispatch({ type: 'SET_THEME', theme: e.matches ? 'dark' : 'light' })
+      document.documentElement.classList.toggle('dark', e.matches)
+    }
+    mediaQuery.addEventListener('change', handleThemeChange)
 
     refresh()
 
-    // 监听来源更新（复制后主进程推送）
-    const off = window.electronAPI.onSourcesUpdated((_event, sources) => {
+    // Sources updated event
+    let offSources: (() => void) | undefined
+    api.onSourcesUpdated((sources) => {
       dispatch({ type: 'SET_SOURCES', sources })
-    })
+    }).then(fn => { offSources = fn })
 
-    return () => { off(); offTheme() }
+    return () => {
+      mediaQuery.removeEventListener('change', handleThemeChange)
+      offSources?.()
+    }
   }, [refresh, dispatch])
 
   return (
