@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from 'react'
 import { useApp } from '../context/AppContext'
+import { api } from '../api'
 
 interface Props {
   initialSourceUrl?: string
@@ -8,7 +9,7 @@ interface Props {
 }
 
 export function InstallModal({ initialSourceUrl = '', initialSlug = '', onClose }: Props) {
-  const { state, dispatch } = useApp()
+  const { dispatch } = useApp()
   const [sourceUrl, setSourceUrl] = useState(initialSourceUrl)
   const [skillSlug, setSkillSlug] = useState(initialSlug)
   const [logs, setLogs] = useState<string[]>([])
@@ -33,10 +34,11 @@ export function InstallModal({ initialSourceUrl = '', initialSlug = '', onClose 
 
   // 监听安装进度
   useEffect(() => {
-    const off = window.electronAPI.onInstallProgress((_event, line) => {
+    let unlisten: (() => void) | undefined
+    api.onInstallProgress((line) => {
       setLogs(prev => [...prev, line])
-    })
-    return off
+    }).then(fn => { unlisten = fn })
+    return () => { unlisten?.() }
   }, [])
 
   const handleInstall = async () => {
@@ -46,44 +48,23 @@ export function InstallModal({ initialSourceUrl = '', initialSlug = '', onClose 
     setError(null)
     setLogs([`> npx skills add ${sourceUrl}${skillSlug ? ` --skill ${skillSlug}` : ''} -g -y\n`])
 
-    // 安装前快照（用于 diff）
-    const prevDirPaths = new Set(state.skills.map(s => s.dirPath))
     const slug = skillSlug.trim()
-
-    const result = await window.electronAPI.installSkill(sourceUrl.trim(), slug || undefined)
+    const result = await api.installSkill(sourceUrl.trim(), slug || undefined)
     setInstalling(false)
     setDone(true)
     if (!result.success) {
       setError(result.error ?? '安装失败')
     } else {
-      // 安装后拉最新数据
-      const [sources, newSkills] = await Promise.all([
-        window.electronAPI.discoverSources(),
-        window.electronAPI.scanAllSkills(),
+      const [sources, newSkills, config] = await Promise.all([
+        api.discoverSources(),
+        api.scanAllSkills(),
+        api.getConfig(),
       ])
-
-      // 渲染层计算 recentInstalls：slug 匹配优先，否则 diff 新增
-      let targetPaths: string[]
-      if (slug) {
-        targetPaths = newSkills.filter(s => s.slug === slug).map(s => s.dirPath)
-      } else {
-        targetPaths = newSkills.filter(s => !prevDirPaths.has(s.dirPath)).map(s => s.dirPath)
-      }
-
-      const config = await window.electronAPI.getConfig()
-      let updatedConfig = config
-      if (targetPaths.length > 0) {
-        const existing = config.recentInstalls ?? []
-        const merged = [...targetPaths, ...existing.filter(p => !targetPaths.includes(p))].slice(0, 10)
-        await window.electronAPI.setConfig({ recentInstalls: merged })
-        updatedConfig = { ...config, recentInstalls: merged }
-      }
-
-      dispatch({ type: 'SET_CONFIG', config: updatedConfig })
       dispatch({ type: 'SET_SOURCES', sources })
       dispatch({ type: 'SET_SKILLS', skills: newSkills })
+      dispatch({ type: 'SET_CONFIG', config })
       dispatch({ type: 'SET_TAB', tab: 'local' })
-      const hasRecent = (updatedConfig.recentInstalls ?? []).length > 0
+      const hasRecent = (config.recentInstalls ?? []).length > 0
       dispatch({ type: 'SET_ACTIVE_SOURCE', id: hasRecent ? 'recent' : null })
       onClose()
     }

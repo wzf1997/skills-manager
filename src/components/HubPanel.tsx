@@ -16,13 +16,16 @@ export function HubPanel() {
   useEffect(() => {
     setLoading(true)
     setError(null)
-    window.electronAPI.fetchFeaturedSkills().then(data => {
-      setSkills(data)
-      setLoading(false)
-    }).catch(() => {
-      setError('加载失败，请检查网络连接')
-      setLoading(false)
-    })
+    fetch('https://raw.githubusercontent.com/qufei1993/skills-hub/main/featured-skills.json')
+      .then(r => r.json())
+      .then(data => {
+        setSkills(data.skills ?? [])
+        setLoading(false)
+      })
+      .catch(() => {
+        setError('加载失败，请检查网络连接')
+        setLoading(false)
+      })
   }, [])
 
   const filtered = skills
