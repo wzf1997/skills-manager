@@ -1,0 +1,1 @@
+{"default":{"identifier":"default","description":"Default capabilities","local":true,"windows":["main"],"permissions":["core:default","shell:allow-execute","shell:allow-spawn","store:allow-get","store:allow-set","store:allow-save","store:allow-load"]}}
