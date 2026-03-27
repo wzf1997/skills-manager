@@ -23,26 +23,32 @@ jobs:
           # macOS ARM64 (.dmg / .app)
           - os: macos-latest
             target: aarch64-apple-darwin
+            args: --no-sign
 
           # macOS x86_64 (.dmg / .app)
           - os: macos-latest
             target: x86_64-apple-darwin
+            args: --no-sign
 
           # Windows x64 (.exe / .msi)
           - os: windows-latest
             target: x86_64-pc-windows-msvc
+            args: ''
 
           # Windows ARM64 (.exe / .msi)
           - os: windows-latest
             target: aarch64-pc-windows-msvc
+            args: ''
 
           # Linux x86_64 (.AppImage / .deb)
           - os: ubuntu-22.04
             target: x86_64-unknown-linux-gnu
+            args: ''
 
           # Linux ARM64 (.AppImage / .deb) — 需要 GitHub Team/Enterprise
           - os: ubuntu-22.04-arm
             target: aarch64-unknown-linux-gnu
+            args: ''
 
     runs-on: ${{ matrix.os }}
 
@@ -85,7 +91,7 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           tauriScript: pnpm tauri
-          args: --target ${{ matrix.target }}
+          args: --target ${{ matrix.target }} ${{ matrix.args }}
           tagName: ${{ env.TAG_NAME }}
           releaseName: 'Skills Manager ${{ env.TAG_NAME }}'
           releaseBody: 'See changelog for details.'
