@@ -12,7 +12,11 @@
       "Bash(pnpm add @tauri-apps/api@^2)",
       "Bash(cargo check)",
       "Bash(rustc --version)",
-      "Bash(rustup show active-toolchain)"
+      "Bash(rustup show active-toolchain)",
+      "Bash(identify /Users/admin/Desktop/skills-manager_tarui/src-tauri/icons/icon.ico)",
+      "Bash(python3 -c \"from PIL import Image; print\\(''ok''\\)\")",
+      "Bash(pip3 install pillow -q)",
+      "Bash(python3 -c \":*)"
     ]
   }
 }
