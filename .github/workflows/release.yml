@@ -47,7 +47,6 @@ jobs:
     runs-on: ${{ matrix.os }}
 
     env:
-      # push tag 时用 tag 名；workflow_dispatch 时用输入值
       TAG_NAME: ${{ startsWith(github.ref, 'refs/tags/') && github.ref_name || inputs.tag_name }}
 
     steps:
@@ -80,20 +79,6 @@ jobs:
       - name: Install frontend deps
         run: pnpm install
 
-      # 6 个 job 同时跑到这里，各自尝试建 Release
-      # 第一个成功，其余返回 "already exists" 错误但 || true 忽略掉
-      # tauri-action 随后按 tagName 找到已有 Release 上传产物
-      - name: Ensure draft release exists (idempotent)
-        shell: bash
-        run: |
-          gh release create "$TAG_NAME" \
-            --draft \
-            --title "Skills Manager $TAG_NAME" \
-            --notes "See changelog for details." \
-          || echo "Release already exists, skipping creation."
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
       - name: Build and upload artifacts
         uses: tauri-apps/tauri-action@v0.5.20
         env:
@@ -106,3 +91,14 @@ jobs:
           releaseBody: 'See changelog for details.'
           releaseDraft: true
           prerelease: false
+
+  publish:
+    needs: build
+    runs-on: ubuntu-latest
+    env:
+      TAG_NAME: ${{ startsWith(github.ref, 'refs/tags/') && github.ref_name || inputs.tag_name }}
+    steps:
+      - name: Publish release
+        run: gh release edit "$TAG_NAME" --draft=false --repo "$GITHUB_REPOSITORY"
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
