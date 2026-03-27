@@ -23,32 +23,38 @@ jobs:
           # macOS ARM64 (.dmg / .app)
           - os: macos-latest
             target: aarch64-apple-darwin
-            args: --no-sign
+            args: ''
+            signing_identity: '-'
 
           # macOS x86_64 (.dmg / .app)
           - os: macos-latest
             target: x86_64-apple-darwin
-            args: --no-sign
+            args: ''
+            signing_identity: '-'
 
           # Windows x64 (.exe / .msi)
           - os: windows-latest
             target: x86_64-pc-windows-msvc
             args: ''
+            signing_identity: ''
 
           # Windows ARM64 (.exe / .msi)
           - os: windows-latest
             target: aarch64-pc-windows-msvc
             args: ''
+            signing_identity: ''
 
           # Linux x86_64 (.AppImage / .deb)
           - os: ubuntu-22.04
             target: x86_64-unknown-linux-gnu
             args: ''
+            signing_identity: ''
 
           # Linux ARM64 (.AppImage / .deb) — 需要 GitHub Team/Enterprise
           - os: ubuntu-22.04-arm
             target: aarch64-unknown-linux-gnu
             args: ''
+            signing_identity: ''
 
     runs-on: ${{ matrix.os }}
 
@@ -89,6 +95,7 @@ jobs:
         uses: tauri-apps/tauri-action@v0.5.20
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          APPLE_SIGNING_IDENTITY: ${{ matrix.signing_identity }}
         with:
           tauriScript: pnpm tauri
           args: --target ${{ matrix.target }} ${{ matrix.args }}
