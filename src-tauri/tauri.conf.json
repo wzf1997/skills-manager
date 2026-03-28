@@ -18,8 +18,7 @@
         "height": 780,
         "minWidth": 900,
         "minHeight": 600,
-        "titleBarStyle": "Overlay",
-        "hiddenTitle": true
+        "titleBarStyle": "Visible"
       }
     ],
     "security": { "csp": null },
@@ -37,7 +36,7 @@
     ],
     "macOS": { "minimumSystemVersion": "12.0" },
     "windows": {
-      "webviewInstallMode": { "type": "downloadBootstrapper" }
+      "webviewInstallMode": { "type": "offlineInstaller" }
     }
   }
 }

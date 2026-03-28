@@ -23,13 +23,13 @@ jobs:
           # macOS ARM64 (.dmg / .app)
           - os: macos-latest
             target: aarch64-apple-darwin
-            args: ''
+            args: '--config tauri.macos.conf.json'
             signing_identity: '-'
 
           # macOS x86_64 (.dmg / .app)
           - os: macos-latest
             target: x86_64-apple-darwin
-            args: ''
+            args: '--config tauri.macos.conf.json'
             signing_identity: '-'
 
           # Windows x64 (.exe / .msi)
@@ -90,6 +90,14 @@ jobs:
 
       - name: Install frontend deps
         run: pnpm install
+
+      - name: Install MSVC ARM64 toolchain (Windows ARM64 cross-compile)
+        if: matrix.target == 'aarch64-pc-windows-msvc'
+        shell: pwsh
+        run: |
+          $installer = "C:\Program Files (x86)\Microsoft Visual Studio\Installer\vs_installer.exe"
+          $vsPath = & "C:\Program Files (x86)\Microsoft Visual Studio\Installer\vswhere.exe" -latest -property installationPath
+          & $installer modify --installPath $vsPath --add Microsoft.VisualStudio.Component.VC.Tools.ARM64 --quiet --norestart | Out-Null
 
       - name: Build and upload artifacts
         uses: tauri-apps/tauri-action@v0.5.20
