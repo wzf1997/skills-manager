@@ -23,13 +23,13 @@ jobs:
           # macOS ARM64 (.dmg / .app)
           - os: macos-latest
             target: aarch64-apple-darwin
-            args: '--config tauri.macos.conf.json'
+            args: '--config src-tauri/tauri.macos.conf.json'
             signing_identity: '-'
 
           # macOS x86_64 (.dmg / .app)
           - os: macos-latest
             target: x86_64-apple-darwin
-            args: '--config tauri.macos.conf.json'
+            args: '--config src-tauri/tauri.macos.conf.json'
             signing_identity: '-'
 
           # Windows x64 (.exe / .msi)
